@@ -82,8 +82,20 @@ data "aws_iam_policy_document" "this" {
     actions = [
       "s3:*"
     ]
-    resources = formatlist("%s/*", var.s3_bucket_arns)
+    resources = [
+      formatlist("%s/*", var.s3_bucket_arns)
+    ]
   }
+
+  statement {
+    actions = [
+      "s3:*"
+    ]
+    resources = [
+      var.s3_bucket_arns
+    ]
+  }
+
 
   statement {
     actions = [
