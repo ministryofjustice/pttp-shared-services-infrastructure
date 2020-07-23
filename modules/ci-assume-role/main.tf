@@ -87,7 +87,9 @@ data "aws_iam_policy_document" "this" {
 
   statement {
     actions = [
-      "s3:*"
+      "s3:HeadBucket",
+      "s3:ListBucket",
+      "s3:GetObject",
     ]
     resources = var.s3_bucket_arns
   }
