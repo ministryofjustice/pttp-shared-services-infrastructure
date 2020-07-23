@@ -13,6 +13,26 @@ resource "aws_s3_bucket" "dns_dhcp_artifacts" {
   }
 }
 
+resource "aws_s3_bucket" "client_dns_dhcp_tf_state" {
+  bucket        = "${var.prefix_name}-client-dns-dhcp-${var.service_name}-tf-state"
+  acl           = "private"
+  force_destroy = false
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = aws_kms_key.artifacts.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+
 resource "aws_s3_bucket_public_access_block" "dns_dhcp_artifacts" {
   bucket = aws_s3_bucket.dns_dhcp_artifacts.bucket
 
@@ -32,6 +52,34 @@ resource "aws_dynamodb_table" "dynamodb_terraform_dns_dhcp_state_lock" {
     name = "LockID"
     type = "S"
   }
+}
+
+resource "aws_s3_bucket" "dns_dhcp_client_tf_state" {
+  bucket        = "${var.prefix_name}-client-dns-dhcp-${var.service_name}-tf-state"
+  acl           = "private"
+  force_destroy = false
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = aws_kms_key.dns_dhcp_artifacts.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "dns_dhcp_client_tf_state" {
+  bucket = aws_s3_bucket.dns_dhcp_client_tf_state.bucket
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 resource "aws_kms_key" "dns_dhcp_artifacts" {
@@ -203,7 +251,7 @@ resource "aws_codebuild_project" "dns_dhcp_development" {
   name          = "${var.prefix_name}-${var.service_name}-dns-dhcp-development"
   description   = "DNS DHCP Development"
   build_timeout = 60
-  service_role  = module.assume-role-dev.arn
+  service_role  = module.dns_dhcp_assume_role_dev.arn
 
   artifacts {
     type = "CODEPIPELINE"
@@ -237,7 +285,7 @@ resource "aws_codebuild_project" "dns_dhcp_pre_production" {
   name          = "${var.prefix_name}-${var.service_name}-dns-dhcp-pre-production"
   description   = "DNS DHCP Pre Production"
   build_timeout = 60
-  service_role  = module.assume-role-pre-production.arn
+  service_role  = module.dns_dhcp_assume_role_pre_production.arn
 
   artifacts {
     type = "CODEPIPELINE"
@@ -267,11 +315,35 @@ resource "aws_codebuild_project" "dns_dhcp_pre_production" {
   }
 }
 
+module "dns_dhcp_assume_role_dev" {
+  source                = "../ci-assume-role"
+  account_role_arn      = var.dev_assume_role_arn
+  prefix_name           = "${var.prefix_name}-dns-dhcp-${var.service_name}-dev"
+  dynamo_db_locking_arn = aws_dynamodb_table.dynamodb_terraform_dns_dhcp_state_lock.arn
+  s3_bucket_arns        = local.s3_bucket_arns
+}
+
+module "dns_dhcp_assume_role_pre_production" {
+  source                = "../ci-assume-role"
+  account_role_arn      = var.pre_production_assume_role_arn
+  prefix_name           = "${var.prefix_name}-dns-dhcp-${var.service_name}-pre-prod"
+  dynamo_db_locking_arn = aws_dynamodb_table.dynamodb_terraform_dns_dhcp_state_lock.arn
+  s3_bucket_arns        = local.s3_bucket_arns
+}
+
+module "dns_dhcp_ci_assume_role_production" {
+  source                = "../ci-assume-role"
+  account_role_arn      = var.production_assume_role_arn
+  prefix_name           = "${var.prefix_name}-dns-dhcp-${var.service_name}-production"
+  dynamo_db_locking_arn = aws_dynamodb_table.dynamodb_terraform_dns_dhcp_state_lock.arn
+  s3_bucket_arns        = local.s3_bucket_arns
+}
+
 resource "aws_codebuild_project" "dns_dhcp_test" {
   name          = "${var.prefix_name}-${var.service_name}-dns-dhcp-test"
   description   = "DNS DHCP Test"
   build_timeout = 60
-  service_role  = module.assume-role-dev.arn
+  service_role  = module.dns_dhcp_assume_role_dev.arn
 
   artifacts {
     type = "CODEPIPELINE"
@@ -306,7 +378,7 @@ resource "aws_codebuild_project" "dns_dhcp_production" {
   name          = "${var.prefix_name}-${var.service_name}-dns-dhcp-production"
   description   = "DNS DHCP Production"
   build_timeout = 60
-  service_role  = module.ci-assume-role-production.arn
+  service_role  = module.dns_dhcp_ci_assume_role_production.arn
 
   artifacts {
     type = "CODEPIPELINE"
