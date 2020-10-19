@@ -83,6 +83,11 @@ An OAuth token is required to pull your source code from Github.
 
 Create an access token for your repository and add it to a `.tfvars` file in the root of the project.
 
+The local configuration file (terraform.tfvars) is required to exist locally before running this terraform.
+It is stored in SSM Parameter Store under the key `/staff-device/shared-services/terraform.tfvars`.
+
+Copy the contents into a local terraform.tfvars in the root of this project.
+
 ```shell script
 github_oauth_token = "abc123"
 ```
