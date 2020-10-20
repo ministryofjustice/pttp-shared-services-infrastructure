@@ -89,6 +89,22 @@ resource "aws_codepipeline" "codepipeline" {
   stage {
     name = "Production"
 
+    dynamic "action" {
+      for_each = var.manual_production_deploy ? [1] : []
+      content {
+        name     = "Approve"
+        owner    = "AWS"
+        category = "Approval"
+        provider = "Manual"
+        version  = "1"
+        run_order  = 1
+
+        configuration = {
+          CustomData = "Deploy to ${aws_codebuild_project.production.name}?"
+        }
+      }
+    }
+
     action {
       name            = "Deploy"
       category        = "Build"
