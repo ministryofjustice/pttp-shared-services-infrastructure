@@ -1,4 +1,4 @@
 variable "repositories" {
-  type    = list
+  type    = set(string)
   default = []
 }
