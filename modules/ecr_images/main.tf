@@ -10,7 +10,7 @@ resource "aws_ecr_repository" "docker_repository" {
 
 resource "aws_ecr_repository_policy" "docker_repository_policy" {
   for_each   = var.repositories
-  repository = "aws_ecr_repository.docker_repository.${each.value}"
+  repository = each.value
 
   policy = <<EOF
 {
