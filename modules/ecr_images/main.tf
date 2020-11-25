@@ -1,4 +1,4 @@
-# ECR's may be destoryed after altering this module
+# ECR's may be destroyed after altering this module
 # Run the build_and_publish script within https://github.com/ministryofjustice/staff-device-docker-base-images 
 resource "aws_ecr_repository" "docker_repository" {
   for_each             = var.repositories
